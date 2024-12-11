@@ -42,7 +42,7 @@ async function loadSettings() {
 async function loadExtensionState() {
   const { extensionState } = await chrome.storage.local.get(["extensionState"]);
   const state = extensionState || "off"; // Default state is 'off'
-  updateButton(state);
+  updateButton(state); // Ensure the button reflects the correct state
 }
 
 // Toggle the extension state when the button is clicked
@@ -53,11 +53,5 @@ toggleButton.addEventListener("click", () => {
 // Initialize the popup on load
 document.addEventListener("DOMContentLoaded", async () => {
   await loadSettings();
-  await loadExtensionState();
-
-  // Ensure button state is synced with background
-  chrome.runtime.sendMessage({ type: "GET_STATE" }, (response) => {
-    const state = response?.state || "off";
-    updateButton(state);
-  });
+  await loadExtensionState(); // Load and apply the extension state when the popup is loaded
 });

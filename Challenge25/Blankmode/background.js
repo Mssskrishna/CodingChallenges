@@ -58,13 +58,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     });
   }
 
-  if (message.type === "GET_STATE") {
-    chrome.action.getBadgeText({}, (text) => {
-      const state = text === "ON" ? "on" : "off";
-      sendResponse({ state });
-    });
-    return true; // Keep the message channel open for async response
-  }
 });
 
 // Set badge text to "OFF" on installation
