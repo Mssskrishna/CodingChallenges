@@ -7,12 +7,15 @@
     "activeTab",
     "scripting",
     "alarms",
-    "storage"
+    "storage",
+    "tabs"
   ],
   "background": {
     "service_worker": "background.js"
   },
-  "host_permissions": ["<all_urls>"],
+  "host_permissions": [
+    "<all_urls>"
+  ],
   "action": {
     "default_popup": "popup.html",
     "default_icon": {
@@ -23,8 +26,12 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["blankmode.css"],
-      "matches": ["<all_urls>"]
+      "resources": [
+        "blankmode.css"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
     }
   ]
 }
