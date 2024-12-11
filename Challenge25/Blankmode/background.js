@@ -9,38 +9,44 @@ async function loadSettings() {
   ]);
   if (interval) customInterval = interval;
   if (duration) blankDuration = duration;
-  console.log(`Loaded settings: interval = ${customInterval}, duration = ${blankDuration}`);
+  console.log(
+    `Loaded settings: interval = ${customInterval}, duration = ${blankDuration}`
+  );
 }
 
 // Listen for messages from the popup or other parts of the extension
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.type === "STATE_CHANGE") {
-    console.log(`Received state change: ${message.state}`);
-    // Handle the state change (e.g., enable/disable features)
+  if (message.type === "TOGGLE_EXTENSION") {
+    chrome.action.getBadgeText({}, async (prevState) => {
+      const nextState = prevState === "ON" ? "OFF" : "ON";
+      chrome.action.setBadgeText({ text: nextState });
+
+      // Update the local storage for extensionState
+      const extensionState = nextState === "ON" ? "on" : "off";
+      chrome.storage.local.set({ extensionState });
+
+      // Perform additional actions if needed
+      if (nextState === "ON") {
+        console.log("Starting blank mode...");
+        await loadSettings(); // Load settings before starting blank mode
+        chrome.alarms.create("blankScreenAlarm", {
+          periodInMinutes: customInterval / (60 * 1000),
+        });
+      } else {
+        console.log("Stopping blank mode...");
+        chrome.alarms.clear("blankScreenAlarm");
+      }
+    });
   }
 
-  if (message.type === "TOGGLE_EXTENSION") {
-    toggleExtension();
+  if (message.type === "GET_STATE") {
+    chrome.action.getBadgeText({}, (text) => {
+      const state = text === "ON" ? "on" : "off";
+      sendResponse({ state });
+    });
+    return true; // Keep the message channel open for async response
   }
 });
-
-// Toggle extension state and create or clear alarms accordingly
-async function toggleExtension() {
-  const prevState = await chrome.action.getBadgeText({});
-  const nextState = prevState === "ON" ? "OFF" : "ON";
-  chrome.action.setBadgeText({ text: nextState });
-
-  if (nextState === "ON") {
-    console.log("Starting blank mode...");
-    await loadSettings(); // Load settings before starting blank mode
-    chrome.alarms.create("blankScreenAlarm", {
-      periodInMinutes: customInterval / (60 * 1000),
-    });
-  } else {
-    console.log("Stopping blank mode...");
-    chrome.alarms.clear("blankScreenAlarm");
-  }
-}
 
 // Set badge text to "OFF" on installation
 chrome.runtime.onInstalled.addListener(() => {
@@ -78,6 +84,27 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
     });
     if (tab) {
       await blankPage(tab.id);
+    }
+  }
+});
+
+chrome.storage.onChanged.addListener(async (changes, area) => {
+  if (area === "local" && (changes.interval || changes.duration)) {
+    console.log("Settings changed:", changes);
+
+    // Reload updated settings
+    await loadSettings();
+
+    // Check if the extension is currently "ON"
+    const currentState = await chrome.action.getBadgeText({});
+    if (currentState === "ON") {
+      console.log("Updating alarms with new settings...");
+
+      // Update the alarm with the new interval
+      chrome.alarms.clear("blankScreenAlarm");
+      chrome.alarms.create("blankScreenAlarm", {
+        periodInMinutes: customInterval / (60 * 1000),
+      });
     }
   }
 });
